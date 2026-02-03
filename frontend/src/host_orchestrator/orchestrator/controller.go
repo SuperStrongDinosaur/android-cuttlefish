@@ -550,9 +550,10 @@ func (h *startCVDHandler) Handle(r *http.Request) (interface{}, error) {
 	}
 	vars := mux.Vars(r)
 	group := vars["group"]
+	name := vars["name"]
 	opts := StartCVDActionOpts{
 		Request:          req,
-		Selector:         cvd.GroupSelector{Name: group},
+		Selector:         cvd.InstanceSelector{GroupName: group, Name: name},
 		Paths:            h.Config.Paths,
 		OperationManager: h.OM,
 		ExecContext:      exec.CommandContext,
