@@ -576,6 +576,13 @@ func (g *Group) Stop() error {
 	return err
 }
 
+func (g *Instance) Stop() error {
+	args := g.selectorArgs()
+	args = append(args, "stop")
+	_, err := g.cli.exec(CVDBin, args...)
+	return err
+}
+
 func (g *Group) selectorArgs() []string {
 	return (&GroupSelector{Name: g.Name}).asArgs()
 }

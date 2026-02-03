@@ -32,10 +32,16 @@ func (a *startCvdCommand) exec(cvdCLI *cvd.CLI, sel cvd.GroupSelector) error {
 	return cvdCLI.LazySelectGroup(sel).Start(cvd.StartOptions{})
 }
 
-type stopCvdCommand struct{}
+type stopGroupCvdCommand struct{}
 
-func (a *stopCvdCommand) exec(cvd *cvd.CLI, sel cvd.GroupSelector) error {
+func (a *stopGroupCvdCommand) exec(cvd *cvd.CLI, sel cvd.GroupSelector) error {
 	return cvd.LazySelectGroup(sel).Stop()
+}
+
+type stopInstanceCvdCommand struct{}
+
+func (a *stopInstanceCvdCommand) exec(cvd *cvd.CLI, sel cvd.InstanceSelector) error {
+	return cvd.LazySelectInstance(sel).Stop()
 }
 
 type removeCvdCommand struct{}

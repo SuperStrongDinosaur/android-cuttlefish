@@ -72,7 +72,7 @@ func (c *Controller) AddRoutes(router *mux.Router) {
 	router.Handle("/cvds/{group}/:start",
 		httpHandler(newExecCVDGroupCommandHandler(c.Config, c.OperationManager, &startCvdCommand{}))).Methods("POST")
 	router.Handle("/cvds/{group}/:stop",
-		httpHandler(newExecCVDGroupCommandHandler(c.Config, c.OperationManager, &stopCvdCommand{}))).Methods("POST")
+		httpHandler(newExecCVDGroupCommandHandler(c.Config, c.OperationManager, &stopGroupCvdCommand{}))).Methods("POST")
 	router.Handle("/cvds/{group}",
 		httpHandler(newExecCVDGroupCommandHandler(c.Config, c.OperationManager, &removeCvdCommand{}))).Methods("DELETE")
 	// Append `include_adb_bugreport=true` query parameter to include a device `adb bugreport` in the cvd bugreport.
@@ -83,7 +83,7 @@ func (c *Controller) AddRoutes(router *mux.Router) {
 	router.Handle("/cvds/{group}/{name}/:start",
 		httpHandler(newStartCVDHandler(c.Config, c.OperationManager))).Methods("POST")
 	router.Handle("/cvds/{group}/{name}/:stop",
-		httpHandler(newExecCVDGroupCommandHandler(c.Config, c.OperationManager, &stopCvdCommand{}))).Methods("POST")
+		httpHandler(newExecCVDInstanceCommandHandler(c.Config, c.OperationManager, &stopInstanceCvdCommand{}))).Methods("POST")
 	router.Handle("/cvds/{group}/{name}/:powerwash",
 		httpHandler(newExecCVDInstanceCommandHandler(c.Config, c.OperationManager, &powerwashCvdCommand{}))).Methods("POST")
 	router.Handle("/cvds/{group}/{name}/:powerbtn",
