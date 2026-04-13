@@ -266,6 +266,9 @@ Result<void> RunStopCvd(StopCvdParams params) {
   if (params.clear_runtime_dirs) {
     args.push_back("--clear_instance_dirs=true");
   }
+  if (!params.instance_nums.empty()) {
+    args.push_back(fmt::format("--instance_nums={}", params.instance_nums));
+  }
   Result<void> cmd_res = RunStopCvdCmd(stopper_path, stop_cvd_envs, args);
   if (cmd_res.ok()) {
     return {};

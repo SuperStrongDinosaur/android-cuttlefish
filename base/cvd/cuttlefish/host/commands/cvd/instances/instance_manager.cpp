@@ -25,9 +25,11 @@
 #include <vector>
 
 #include <android-base/file.h>
+#include <android-base/parseint.h>
 #include <fmt/format.h>
 #include "absl/log/log.h"
 #include "absl/strings/match.h"
+#include "absl/strings/str_split.h"
 
 #include "cuttlefish/common/libs/utils/files.h"
 #include "cuttlefish/host/commands/cvd/cli/commands/host_tool_target.h"
@@ -209,7 +211,8 @@ Result<void> InstanceManager::UpdateInstanceGroup(
 Result<void> InstanceManager::StopInstanceGroup(
     LocalInstanceGroup& group,
     std::optional<std::chrono::seconds> launcher_timeout,
-    InstanceDirActionOnStop instance_dir_action) {
+    InstanceDirActionOnStop instance_dir_action,
+    const std::string& instance_nums) {
   const auto stop_bin = CF_EXPECT(StopBin(group.HostArtifactsPath()));
   const auto stop_bin_path = group.HostArtifactsPath() + "/bin/" + stop_bin;
   int wait_for_launcher_secs = 0;
@@ -222,13 +225,30 @@ Result<void> InstanceManager::StopInstanceGroup(
       .wait_for_launcher_secs = wait_for_launcher_secs,
       .clear_runtime_dirs =
           instance_dir_action == InstanceDirActionOnStop::Clear,
+      .instance_nums = instance_nums,
   });
   if (!cmd_result.ok()) {
     LOG(WARNING)
         << "Warning: error stopping instances for dir \"" + group.HomeDir() +
                "\".\nThis can happen if instances are already stopped.\n";
   }
-  group.SetAllStates(cvd::INSTANCE_STATE_STOPPED);
+  if (instance_nums.empty()) {
+    group.SetAllStates(cvd::INSTANCE_STATE_STOPPED);
+  } else {
+    std::vector<std::string_view> tokens = absl::StrSplit(instance_nums, ",");
+    std::set<unsigned> ids_to_stop;
+    for (const auto& token : tokens) {
+      unsigned id;
+      if (android::base::ParseUint(std::string(token), &id)) {
+        ids_to_stop.insert(id);
+      }
+    }
+    for (auto& instance : group.Instances()) {
+      if (ids_to_stop.count(instance.id()) > 0) {
+        instance.set_state(cvd::INSTANCE_STATE_STOPPED);
+      }
+    }
+  }
   // TODO: b/471069557 - diagnose unused
   Result<void> unused = instance_db_.UpdateInstanceGroup(group);
   return {};

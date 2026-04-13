@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+#include <android-base/strings.h>
+
 #include "cuttlefish/common/libs/utils/flag_parser.h"
 #include "cuttlefish/host/commands/cvd/cli/command_request.h"
 #include "cuttlefish/host/commands/cvd/cli/commands/command_handler.h"
@@ -93,10 +95,26 @@ Result<void> CvdStopCommandHandler::Handle(const CommandRequest& request) {
   if (flags.wait_for_launcher_secs > 0) {
     launcher_timeout.emplace(flags.wait_for_launcher_secs);
   }
+
+  std::string instance_nums;
+  if (request.Selectors().instance_names) {
+    std::vector<std::string> ids;
+    for (const auto& name : *request.Selectors().instance_names) {
+      auto instances = group.FindByInstanceName(name);
+      if (!instances.empty()) {
+        ids.push_back(std::to_string(instances.front().id()));
+      } else {
+        return CF_ERRF("Instance '{}' not found in group '{}'", name, group.GroupName());
+      }
+    }
+    instance_nums = android::base::Join(ids, ",");
+  }
+
   Result<void> stop_outcome = instance_manager_.StopInstanceGroup(
       group, launcher_timeout,
       flags.clear_instance_dirs ? InstanceDirActionOnStop::Clear
-                                : InstanceDirActionOnStop::Keep);
+                                : InstanceDirActionOnStop::Keep,
+      instance_nums);
 
   GatherVmStopMetrics(group);
 

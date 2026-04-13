@@ -31,6 +31,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/match.h"
+#include "absl/strings/str_split.h"
 
 #include "cuttlefish/common/libs/fs/shared_fd.h"
 #include "cuttlefish/common/libs/utils/environment.h"
@@ -158,12 +159,14 @@ int StopInstance(const CuttlefishConfig& config,
 struct FlagVaules {
   std::int32_t wait_for_launcher;
   bool clear_instance_dirs;
+  std::string instance_nums;
   bool helpxml;
 };
 
 FlagVaules GetFlagValues(int argc, char** argv) {
   std::int32_t wait_for_launcher = 5;
   bool clear_instance_dirs = false;
+  std::string instance_nums = "";
   std::vector<Flag> flags;
   flags.emplace_back(
       GflagsCompatFlag("wait_for_launcher", wait_for_launcher)
@@ -173,6 +176,9 @@ FlagVaules GetFlagValues(int argc, char** argv) {
       GflagsCompatFlag("clear_instance_dirs", clear_instance_dirs)
           .Help("If provided, deletes the instance dir after attempting to "
                 "stop each instance."));
+  flags.emplace_back(
+      GflagsCompatFlag("instance_nums", instance_nums)
+          .Help("Comma-separated list of instance numbers to stop."));
   flags.emplace_back(HelpFlag(flags));
   bool helpxml = false;
   flags.emplace_back(HelpXmlFlag(flags, std::cout, helpxml));
@@ -182,15 +188,24 @@ FlagVaules GetFlagValues(int argc, char** argv) {
   auto parse_res = ConsumeFlags(flags, args);
   CHECK(parse_res.ok() || helpxml) << "Could not process command line flags.";
 
-  return {wait_for_launcher, clear_instance_dirs, helpxml};
+  return {wait_for_launcher, clear_instance_dirs, instance_nums, helpxml};
 }
 
 int StopCvdMain(const std::int32_t wait_for_launcher,
-                const bool clear_instance_dirs) {
+                const bool clear_instance_dirs,
+                const std::string& instance_nums_str) {
   auto config = CuttlefishConfig::Get();
   if (!config) {
     LOG(ERROR) << "Failed to obtain config object";
     return FallBackStop(FallbackDirs());
+  }
+
+  std::set<std::string> instance_ids;
+  if (!instance_nums_str.empty()) {
+    std::vector<std::string_view> tokens = absl::StrSplit(instance_nums_str, ',');
+    for (const auto& token : tokens) {
+      instance_ids.insert(std::string(token));
+    }
   }
 
   int exit_code = 0;
@@ -198,6 +213,9 @@ int StopCvdMain(const std::int32_t wait_for_launcher,
   std::vector<std::future<int>> exit_state_futures;
   exit_state_futures.reserve(instances.size());
   for (const auto& instance : instances) {
+    if (!instance_ids.empty() && instance_ids.count(instance.id()) == 0) {
+      continue;
+    }
     std::future<int> exit_code_from_thread = std::async(
         std::launch::async,
         [&instance, &config, &wait_for_launcher,
@@ -223,7 +241,7 @@ int StopCvdMain(const std::int32_t wait_for_launcher,
 } // namespace cuttlefish
 
 int main(int argc, char** argv) {
-  const auto [wait_for_launcher, clear_instance_dirs, helpxml] =
+  const auto [wait_for_launcher, clear_instance_dirs, instance_nums, helpxml] =
       cuttlefish::GetFlagValues(argc, argv);
   cuttlefish::LogToStderr();
 
@@ -244,5 +262,5 @@ int main(int argc, char** argv) {
     cuttlefish::MetricsReceiver::LogMetricsVMStop();
   }
 
-  return cuttlefish::StopCvdMain(wait_for_launcher, clear_instance_dirs);
+  return cuttlefish::StopCvdMain(wait_for_launcher, clear_instance_dirs, instance_nums);
 }
