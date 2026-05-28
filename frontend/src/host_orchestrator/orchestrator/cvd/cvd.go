@@ -383,6 +383,14 @@ func (i *Instance) ADBPort() uint32 {
 	return i.instance.ADBPort
 }
 
+func (i *Instance) Start(opts StartOptions) error {
+	args := i.selectorArgs()
+	args = append(args, "start", "--report_anonymous_usage_stats=y")
+	args = append(args, opts.toArgs()...)
+	_, err := i.cli.exec(CVDBin, args...)
+	return err
+}
+
 type DisplayAddOpts struct {
 	Width         int
 	Height        int
