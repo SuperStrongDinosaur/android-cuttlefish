@@ -43,6 +43,11 @@ class CvdStartCommandHandler : public CvdCommandHandler {
   bool RequiresDeviceExists() const override { return true; }
 
  private:
+  Result<void> LaunchSingleInstance(LocalInstance& instance,
+                                    LocalInstanceGroup& group,
+                                    const cvd_common::Envs& envs,
+                                    const cvd_common::Args& args);
+
   Result<void> LaunchDevice(Command command, LocalInstanceGroup& group,
                             const cvd_common::Envs& envs,
                             const CommandRequest& request);
